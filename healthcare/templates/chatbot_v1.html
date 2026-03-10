@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Front</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+    }
+
+    /* Delete Icon */
+    .delete-icon {
+      cursor: pointer;
+      font-size: 26px;
+      color: red;
+    }
+
+    /* Model Dropdown */
+    select {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    /* Chat Area */
+    .chat-container {
+      flex: 1;
+      background: white;
+      margin: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* each message row stacked top->bottom */
+    .message-row {
+      display: flex;
+      width: 100%;
+      padding: 4px 0;
+    }
+
+    /* AI messages align left */
+    .message-row.ai {
+      justify-content: flex-start;
+    }
+
+    /* User messages align right */
+    .message-row.user {
+      justify-content: flex-end;
+    }
+
+    /* bubble styling */
+    .bubble {
+      max-width: 72%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+      word-wrap: break-word;
+      line-height: 1.3;
+    }
+
+    .bubble.ai {
+      background: #f1f1f1;
+      color: #222;
+      border-bottom-left-radius: 4px;
+      text-align: left;
+    }
+
+    .bubble.user {
+      background: #e6f0ff;
+      color: #072a6b;
+      border-bottom-right-radius: 4px;
+      text-align: right;
+    }
+
+    @media (max-width: 640px) {
+      .bubble { max-width: 100%; }
+      .message-row.user, .message-row.ai { justify-content: flex-start; }
+      .bubble.user { text-align: left; }
+    }
+
+    /* Bottom Bar */
+    .input-area {
+      display: flex;
+      padding: 10px;
+      background: white;
+      border-top: 1px solid #ddd;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .send-btn {
+      margin-left: 10px;
+      background: #007bff;
+      border: none;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .send-btn:hover {
+      background: #005dc1;
+    }
+
+    /* Policy Evaluation Sections */
+    .section-title {
+      font-size: 1em;
+      margin: 20px 0 10px;
+      color: #005dc1;
+    }
+
+    .card {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+
+    .table th, .table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .table th {
+      background: #f1f1f1;
+      font-weight: bold;
+    }
+
+    .card-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .card-desc {
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ensure CSRF cookie is set -->
+  <form id="csrf-form" style="display:none;">
+    {% csrf_token %}
+  </form>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="delete-icon" title="Clear conversation">🗑️</div>
+
+  </div>
+
+  <!-- CHAT AREA -->
+  <div class="chat-container" id="chat-box">
+    <!-- Conversation messages will appear here as rows with user and AI side-by-side -->
+  </div>
+
+  <!-- INPUT BAR -->
+  <div class="input-area">
+    <input id="user-input" type="text" placeholder="How may I help you?" />
+    <button class="send-btn" aria-label="Send">✈️</button>
+  </div>
+
+
+
+</body>
+<script>
+  const chatBox = document.getElementById('chat-box');
+  const userInput = document.getElementById('user-input');
+  const sendBtn = document.querySelector('.send-btn');
+  const deleteicon = document.querySelector('.delete-icon');
+
+  function appendMessage(sender, text) {
+    const row = document.createElement('div');
+    row.className = `message-row ${sender}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${sender}`;
+    bubble.textContent = text;
+
+    row.appendChild(bubble);
+    chatBox.appendChild(row);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return { row, bubble };
+  }
+
+  // get CSRF token from cookie (Django)
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Generate a unique session_id on page refresh
+  const session_id = (() => {
+    if (window.crypto && crypto.randomUUID) {
+      return crypto.randomUUID();
+    } else {
+      return 'sess-' + Math.random().toString(36).substr(2, 12);
+    }
+  })();
+
+  async function user_query(query) {
+    const url = 'http://127.0.0.1:8000/main_fun/';
+    const payload = {query: query, session_id: session_id};
+    const csrftoken = getCookie('csrftoken');
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken || ''
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        return { error: `HTTP ${resp.status}: ${txt || resp.statusText}` };
+      }
+
+      const data = await resp.json();
+      return { data };
+    } catch (err) {
+      return { error: err.message || String(err) };
+    }
+  }
+
+  function renderresponse(response) {
+    const result = response.result || response;
+    return `
+      <h1 class="section-title">Health Status</h1>
+      <div class="card">${result.health_status}</div>
+
+      <h1 class="section-title">Recommendation</h1>
+      <div class="card">${result.recommendation}</div>
+    `;
+  }
+
+  async function handleSend() {
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    // show user message immediately
+    appendMessage('user', message);
+    userInput.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // disable send while waiting
+    sendBtn.disabled = true;
+    const waiting = appendMessage('ai', 'AI: ...');
+
+    const result = await user_query(message);
+    sendBtn.disabled = false;
+
+    if (result.error) {
+      waiting.bubble.textContent = `AI: Error — ${result.error}`;
+    } else {
+      const d = result.data;
+      if (d.health_status || d.recommendation) {
+        waiting.bubble.innerHTML = `${d.health_status || ''}<br>${d.recommendation || ''}`;
+      } else if (d.Answer || d.message) {
+        waiting.bubble.textContent = d.Answer || d.message;
+      } else {
+        // Parse the JSON string from d.result and extract the message
+        let aiText = '';
+        try {
+          const parsed = JSON.parse(d?.result || '{}');
+          aiText = parsed.Answer || parsed.message || parsed.answer || parsed.result || d?.result || '';
+        } catch (e) {
+          // If parsing fails, fall back to the raw string
+          aiText = d?.result || '';
+        }
+        waiting.bubble.textContent = aiText;
+      }
+    }
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  sendBtn?.addEventListener('click', handleSend);
+
+  userInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSend();
+    }
+  });
+
+  if (deleteicon) {
+    deleteicon.addEventListener('click', () => {
+      userInput.value = '';
+      chatBox.innerHTML = '';
+      document.getElementById('policy-eval-sections').style.display = 'none';
+    });
+  }
+</script>
+</html>

@@ -8,6 +8,8 @@ import time
 
 def chatbot(request):
     return render(request, 'chatbot.html')
+def chatbot1(request):
+    return render(request, 'chatbot_v1.html')
 
 def test(request):
     if request.method != 'POST':
@@ -59,3 +61,5 @@ def test(request):
     print("LLM processing time: %.2f s", end_time - start_time)
 
     return JsonResponse({'result': response_text})
+
+

@@ -263,6 +263,6 @@ add_content_slide(prs, "Next Steps", [
 add_title_slide(prs, "Thank You!", "Healthcare AI Chatbot Platform\nPrivacy-First Clinical Intelligence")
 
 # Save presentation
-output_path = r"c:\Users\Paramveer Singh\OneDrive\Project\infogain\healthcare\PRESENTATION.pptx"
+output_path = r"C:\Users\Paramveer Singh\Desktop\PRESENTATION.pptx"
 prs.save(output_path)
 print(f"✓ PowerPoint presentation created: {output_path}")

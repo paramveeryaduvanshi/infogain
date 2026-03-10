@@ -17,9 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from chatbot import views
+from chatbot import langchainollama
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('chatbot/', views.chatbot, name='chatbot'),
+    path('chatbot1/', views.chatbot1, name='chatbot1'),
     path('test/', views.test, name='test'),
+    path('main_fun/', langchainollama.main_fun, name='main_fun'),
 ]
