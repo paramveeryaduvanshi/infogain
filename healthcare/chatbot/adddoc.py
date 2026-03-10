@@ -30,8 +30,7 @@ def process_and_push(df, dataset_name):
         ids.append(unique_id)
         documents.append(doc_text)
         metadatas.append(metadata)
-        print(ids, documents,metadatas)
-        break
+
     # Call your specific function
     add_documents(ids, documents, metadatas)
     
@@ -39,4 +38,35 @@ def process_and_push(df, dataset_name):
 
 # Run for both datasets
 process_and_push(df1, "Dataset1")
-process_and_push(df2, "Dataset2")
+
+
+def process_and_push_in_chunks(df, dataset_name):
+    ids = []
+    documents = []
+    metadatas = []
+    chunk_size = 10
+    for i in range(0, len(df), chunk_size):
+        chunk = df.iloc[i:i+chunk_size]
+        # Merge all rows in the chunk into one document string
+        doc_text = f"Dataset: {dataset_name}\n" + "\n".join([
+            ", ".join([f"{col}: {val}" for col, val in row.items()])
+            for _, row in chunk.iterrows()
+        ])
+        # Generate a unique ID for this chunk
+        unique_id = f"{dataset_name}_Patient_Name_{i+1}_{uuid.uuid4().hex[:6]}"
+        # Metadata: you can customize, here using first row's Patient_Number
+        metadata = {
+            "Patient_Number": f"Patient_Name {i+1})",
+            "source_dataset": dataset_name
+        }
+        #metadata = sanitize_metadata(metadata)
+        ids.append(unique_id)
+        documents.append(doc_text)
+        metadatas.append(metadata)
+        # Call your specific function
+        #print(ids,documents,metadatas)
+    add_documents(ids, documents, metadatas)
+    
+    print(f"✅ Successfully pushed {len(documents)} records from {dataset_name}")
+
+process_and_push_in_chunks(df2, "Dataset2")

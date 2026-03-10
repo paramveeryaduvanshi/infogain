@@ -43,8 +43,8 @@ intent_analysis_prompt = ChatPromptTemplate.from_messages([
 
     Case 2:
     -If the chat history is insufficient to answer the query and you need more information about patient/patients than respond with clear and crisp query in this case which we can run on vector database to retrieve the information.
-     We have {database_schema} information in vector database. So you can ask for any specific information related to healthcare metrics and lifestyle data of patient/patients in the form of query. You can also ask for multiple information in a single query.
-     eg. "What is the age of Pateint 1" or "What is the gender and blood group of Patient 2 and 4?"
+     eg. "What is the age of Patient_Number 1" or "What is the gender and blood group of Patient_Number 2 and Patient_Number 4?"
+     Check available attribute of patient/patients in the {database_schema} and ask for those information in the query if needed.
 
     ###Note:
     -Do not respond with "Query" key if the information is already present in the chat history.

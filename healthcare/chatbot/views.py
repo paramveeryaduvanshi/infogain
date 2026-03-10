@@ -38,7 +38,7 @@ def test(request):
     try:
         print("calling ollama.generate …")
         response = ollama.generate(
-            model='llama3.2',
+            model='mistral',
             prompt=health_analysis_prompt.format(
                 user_info=json.dumps(user_info),
                 query=query

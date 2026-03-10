@@ -76,6 +76,7 @@ def main_fun(request):
             query_text = response.get("Query")
             consolidate_documents = []
             retrieve_doc = user_query(query_texts=query_text, n_results=5, where=None, where_document=None, include=["documents", "metadatas"])
+            print("Retrieve Doc from VectorDB:", retrieve_doc)
             for doc in retrieve_doc['documents']:
                 consolidate_documents.append(doc)
             print("Consolidate Documents:", consolidate_documents)
