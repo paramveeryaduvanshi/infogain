@@ -14,26 +14,18 @@ def process_and_push(df, dataset_name):
     for _, row in df.iterrows():
         # Convert row to dictionary for metadata
         row_dict = row.to_dict()
-        row_dict['source_dataset'] = dataset_name # Track which file it came from
-        #print(row_dict) # Debug: Check the row data being processed
-        # Create a descriptive string for the LLM to "read"
-        # Example: "Patient 1: Age 34, BMI 23, Smoking: No..."
+        row_dict['source_dataset'] = dataset_name
         doc_text = f"Dataset: {dataset_name}, " + ", ".join([f"{col}: {val}" for col, val in row_dict.items()])
-        
         # Generate a unique ID for this record
         unique_id = f"{dataset_name}_Patient_Number_{row_dict.get('Patient_Number', uuid.uuid4())}_{uuid.uuid4().hex[:6]}"
         
-        metadata = {
-            "Patient_Number": row_dict.get("Patient_Number", "Unknown"),
-            "source_dataset": dataset_name,
-        }
+        metadata = row_dict  # You can customize metadata as needed, here we are using the entire row as metadata
+        #metadata = sanitize_metadata(metadata)  # If you have a function to clean/sanitize
         ids.append(unique_id)
         documents.append(doc_text)
         metadatas.append(metadata)
-
     # Call your specific function
-    add_documents(ids, documents, metadatas)
-    
+    add_documents(ids, documents, metadatas)    
     print(f"✅ Successfully pushed {len(documents)} records from {dataset_name}")
 
 # Run for both datasets
@@ -41,32 +33,22 @@ process_and_push(df1, "Dataset1")
 
 
 def process_and_push_in_chunks(df, dataset_name):
-    ids = []
-    documents = []
-    metadatas = []
     chunk_size = 10
     for i in range(0, len(df), chunk_size):
         chunk = df.iloc[i:i+chunk_size]
-        # Merge all rows in the chunk into one document string
-        doc_text = f"Dataset: {dataset_name}\n" + "\n".join([
+        # Combine all rows into one document string
+        doc_text = "\n".join([
             ", ".join([f"{col}: {val}" for col, val in row.items()])
             for _, row in chunk.iterrows()
         ])
-        # Generate a unique ID for this chunk
-        unique_id = f"{dataset_name}_Patient_Name_{i+1}_{uuid.uuid4().hex[:6]}"
-        # Metadata: you can customize, here using first row's Patient_Number
+        unique_id = f"{dataset_name}_Patient_Number_{i+1}_{uuid.uuid4().hex[:6]}"
+        # You can choose what metadata to keep for the chunk
         metadata = {
-            "Patient_Number": f"Patient_Name {i+1})",
-            "source_dataset": dataset_name
+            "source_dataset": dataset_name,
+            "Patient_Numbers": i+1
         }
-        #metadata = sanitize_metadata(metadata)
-        ids.append(unique_id)
-        documents.append(doc_text)
-        metadatas.append(metadata)
-        # Call your specific function
-        #print(ids,documents,metadatas)
-    add_documents(ids, documents, metadatas)
-    
-    print(f"✅ Successfully pushed {len(documents)} records from {dataset_name}")
+        add_documents(unique_id, documents=[doc_text], metadatas=[metadata])
+    #print(unique_id,doc_text,metadata)
+    print(f"✅ Successfully pushed {len(df)} records from {dataset_name} (chunk {i//chunk_size + 1})")
 
 process_and_push_in_chunks(df2, "Dataset2")

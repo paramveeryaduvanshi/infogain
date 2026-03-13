@@ -24,6 +24,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('chatbot/', views.chatbot, name='chatbot'),
     path('chatbot1/', views.chatbot1, name='chatbot1'),
-    path('test/', views.test, name='test'),
+    path('test/', views.test_chatbot, name='test'),
     path('main_fun/', langchainollama.main_fun, name='main_fun'),
 ]

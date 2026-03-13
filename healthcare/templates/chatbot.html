@@ -236,10 +236,19 @@
     }
     return cookieValue;
   }
+  // Generate a unique session_id on page refresh
+  const session_id = (() => {
+    if (window.crypto && crypto.randomUUID) {
+      return crypto.randomUUID();
+    } else {
+      return 'sess-' + Math.random().toString(36).substr(2, 12);
+    }
+  })();
+
 
   async function user_query(query) {
     const url = 'http://127.0.0.1:8000/test/';
-    const payload = {query:query};
+    const payload = {query: query, session_id: session_id};
     const csrftoken = getCookie('csrftoken');
 
     try {
