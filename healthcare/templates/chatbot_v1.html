@@ -305,21 +305,22 @@
       waiting.bubble.textContent = `AI: Error — ${result.error}`;
     } else {
       const d = result.data;
+      // Prefer health_status/recommendation if present
       if (d.health_status || d.recommendation) {
         waiting.bubble.innerHTML = `${d.health_status || ''}<br>${d.recommendation || ''}`;
-      } else if (d.Answer || d.message) {
-        waiting.bubble.textContent = d.Answer || d.message;
       } else {
-        // Parse the JSON string from d.result and extract the message
-        let aiText = '';
-        try {
-          const parsed = JSON.parse(d?.result || '{}');
-          aiText = parsed.Answer || parsed.message || parsed.answer || parsed.result || d?.result || '';
-        } catch (e) {
-          // If parsing fails, fall back to the raw string
-          aiText = d?.result || '';
+        // Try to display Answer/message/answer/result fields
+        let aiText = d.Answer || d.message || d.answer || d.result || '';
+        // If still empty, try to parse d.result as JSON
+        if (!aiText && typeof d.result === 'string') {
+          try {
+            const parsed = JSON.parse(d.result);
+            aiText = parsed.Answer || parsed.message || parsed.answer || parsed.result || '';
+          } catch (e) {
+            aiText = d.result;
+          }
         }
-        waiting.bubble.textContent = aiText;
+        waiting.bubble.textContent = aiText || 'AI: No response.';
       }
     }
     chatBox.scrollTop = chatBox.scrollHeight;

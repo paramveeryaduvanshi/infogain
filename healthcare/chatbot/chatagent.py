@@ -41,13 +41,13 @@ def get_schema():
         return str(e)
 
 def run_sql(sql_query):
-    start_time = time.perf_counter()
-    conn = sqlite3.connect(DB_PATH)
-    # Using a Row factory makes it easy to convert to dictionaries
-    conn.row_factory = sqlite3.Row 
-    cursor = conn.cursor()
-    
     try:
+        start_time = time.perf_counter()
+        conn = sqlite3.connect(DB_PATH)
+        # Using a Row factory makes it easy to convert to dictionaries
+        conn.row_factory = sqlite3.Row 
+        cursor = conn.cursor()    
+    
         cursor.execute(sql_query)
         rows = cursor.fetchall()
         
@@ -84,16 +84,14 @@ def run_sql(sql_query):
     finally:
         conn.close()
 
-def level1(user_query, schema, prompt, session_id, chat_history=None):
-    start_time = time.perf_counter()
+def level1(user_query, schema, prompt, session_id, chat_history):
     try:
+        start_time = time.perf_counter()
         ## ollama.generate() returns a GenerateResponse object
         #response = ollama.generate(model='llama3.2', prompt=prompt)
         
         ## Access the .response attribute (not dict key)
         #response_text = response.response.strip()
-        if not chat_history:
-            chat_history = []
         llm = ChatOpenAI(model=OPENAI_MODEL, temperature=0)
         level1 = RunnableSequence(prompt, llm)
         # 1. Wrap it with history management
@@ -107,40 +105,44 @@ def level1(user_query, schema, prompt, session_id, chat_history=None):
         response = level1_with_history.invoke(
             {"user_query": user_query, "schema": schema, "chat_history": chat_history}, 
             config=config)
-        logging.info(f"Level 1 Response: {response.content if hasattr(response, 'content') else response}")
-        logging.info(f"Level 1 Chat_history: {chat_history}")
+        response = response.content if hasattr(response, 'content') else response
+        #logging.info(f"Level 1 Response: {response}")
+        response = json.loads(response) if isinstance(response, str) else response
+        if "Answer" in response.keys():
+            logging.info(f"Level 1 Chat_history: {chat_history}")
         end_time = time.perf_counter()
         logging.info(f"Total processing time for level 1: {(end_time - start_time):.2f} seconds")
-        return response.content if hasattr(response, 'content') else response
+        return response
         
     except Exception as e:
         logging.error("Error at level1: %s", e)
         return str(e)
 
-def level2(user_query,user_info, prompt, session_id, chat_history=None):
-    start_time = time.perf_counter()
+def level2(user_query,user_data, prompt, session_id, chat_history):    
     try:
-        if not chat_history:
-            chat_history = []
-        user_info =  json.dumps(user_info)
+        start_time = time.perf_counter()
+        user_data =  json.dumps(user_data)
         llm = ChatOpenAI(model=OPENAI_MODEL, temperature=0)
         level2 = RunnableSequence(prompt, llm)
         # 1. Wrap it with history management
         level2_with_history = RunnableWithMessageHistory(
             level2,
             get_session_history,
-            input_messages_key="user_info",
+            input_messages_key="user_data",
             history_messages_key="chat_history")        
         # 2. Invoke Intent Analysis with Session ID
         config = {"configurable": {"session_id": session_id}}
         response = level2_with_history.invoke(
-            {"user_query": user_query, "user_info": user_info, "chat_history": chat_history}, 
+            {"user_query": user_query, "user_data": user_data, "chat_history": chat_history}, 
             config=config)
-        logging.info(f"Level 2 Response: {response.content if hasattr(response, 'content') else response}")
+        response = response.content if hasattr(response, 'content') else response
+        response = json.loads(response) if isinstance(response, str) else response
+        #logging.info(f"Level 2 Response: {response}")
         logging.info(f"Level 2 Chat_history: {chat_history}")
         end_time = time.perf_counter()
         logging.info(f"Total processing time for level 2: {(end_time - start_time):.2f} seconds")
-        return response.content if hasattr(response, 'content') else response
+        
+        return response
         
     except Exception as e:
         logging.error("Error at level2: %s", e)
@@ -148,15 +150,19 @@ def level2(user_query,user_info, prompt, session_id, chat_history=None):
 
 def main_func(user_query, session_id, schema=metadata_structure, prompt1=level1_query_prompt, prompt2=level2_query_prompt):
     try:
-        print("Generating SQL query for user query:", user_query)
+        chat_history = get_session_history(session_id)
+        if not chat_history:
+            chat_history = []      
         
-        level1_response = level1(user_query, schema, prompt1, session_id)
-        level1_response = json.dumps(level1_response) if isinstance(level1_response, dict) else level1_response
-        level1_response = json.loads(level1_response)   
+        level1_response = level1(user_query, schema, prompt1, session_id, chat_history)
+        
+        #level1_response = json.loads(level1_response)   
         if "Query" in level1_response.keys():
-            user_info = run_sql(level1_response["Query"])
-            level2_response = level2(user_query, user_info, prompt2, session_id)  
+            sql_query_result = run_sql(level1_response["Query"])
+            user_data = [level1_response, {"Query_output": sql_query_result[0]}]
+            level2_response = level2(user_query, user_data, prompt2, session_id, chat_history)
             return level2_response
+        
         return level1_response
     except Exception as e:
         logging.error("Error in main function: %s", e)

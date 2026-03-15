@@ -24,5 +24,5 @@ metadata_structure = {
     'Dataset2': {
         'Patient_Number': int, #eg. 1,2,3...100
         'Day_Number': int, #eg. 1,2,3...30
-        'Physical_activity': int}
+        'Physical_activity': int} # Dataset2 has multiple records of Patient_Number based on Day_Number
 }

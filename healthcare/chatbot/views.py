@@ -19,13 +19,15 @@ def test_chatbot(request):
             else:
                 user_query = request.POST.get('query')
                 session_id = request.POST.get('session_id')
+            logging.info(f"Received user query at view: {user_query} with session_id: {session_id}")
             response = main_func(user_query, session_id)
-            return response
+            logging.info(f"Response generated at views: {response}")
+            return JsonResponse(response)
         else:
-            return {"error": "Request does not have valid method"}
+            return JsonResponse({"error": "Request does not have valid method"})
     except Exception as e:
         logging.info("Error in view: %s", e)
-        return {"error": str(e)}
+        return JsonResponse({"error": str(e)})
 
 
 

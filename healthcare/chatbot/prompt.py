@@ -75,7 +75,7 @@ You are a Senior Healthcare Analyst AI. Your goal is to synthesize clinical heal
 Query:
 {user_query}
 UserHealthProfile: 
-{user_info}
+{user_data}
 Chathistory:
 {chat_history}
 
